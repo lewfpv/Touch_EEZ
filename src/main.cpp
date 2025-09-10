@@ -15,7 +15,7 @@
 //#include <udpconfig.h>
 #include <ArduinoJson.h>
 
-String fwversion = "1.0.1";
+String fwversion = "1.0.3";
 
 std::queue<Message> msgQueue;
 portMUX_TYPE queueMux = portMUX_INITIALIZER_UNLOCKED; // FreeRTOS lock

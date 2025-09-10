@@ -171,21 +171,22 @@ void action_ota(lv_event_t * e) {
     Serial.println("\n✅ WiFi connected!");
     Serial.println(WiFi.localIP());
 
-    // Firmware URL
-    String fwURL = "https://raw.githubusercontent.com/lewfpv/Touch_EEZ/main/fw/firmware.bin";
+        t_httpUpdate_return ret = ESPhttpUpdate.update("https://raw.githubusercontent.com/lewfpv/Touch_EEZ/main/fw/firmware.bin");
 
-    t_httpUpdate_return ret = ESPhttpUpdate.update(fwURL);
-    switch(ret) {
-    case HTTP_UPDATE_FAILED:
-      Serial.printf("Update failed: %s\n", ESPhttpUpdate.getLastErrorString().c_str());
-      break;
-    case HTTP_UPDATE_NO_UPDATES:
-      Serial.println("No update available");
-      break;
-    case HTTP_UPDATE_OK:
-      Serial.println("Update ok"); // automatikusan újraindul
-      break;
-  }
+        switch(ret) {
+            case HTTP_UPDATE_FAILED:
+                Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+                break;
+
+            case HTTP_UPDATE_NO_UPDATES:
+                Serial.println("HTTP_UPDATE_NO_UPDATES");
+                break;
+
+            case HTTP_UPDATE_OK:
+               Serial.println("HTTP_UPDATE_OK");
+                break;
+        }
+
   } else {
     Serial.println("\n❌ WiFi connection failed.");
   }
