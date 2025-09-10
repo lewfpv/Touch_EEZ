@@ -172,7 +172,7 @@ void action_ota(lv_event_t * e) {
     Serial.println(WiFi.localIP());
 
     // Firmware URL
-    String fwURL = "http://yourserver.com/firmware.bin";
+    String fwURL = "https://raw.githubusercontent.com/lewfpv/Touch_EEZ/main/fw/firmware.bin";
 
     t_httpUpdate_return ret = ESPhttpUpdate.update(fwURL);
     switch(ret) {
