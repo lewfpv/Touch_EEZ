@@ -1,0 +1,14 @@
+actions.h
+fonts.h
+images.c
+images.h
+lista.txt
+screens.c
+screens.h
+structs.h
+styles.c
+styles.h
+ui.c
+ui.h
+ui_image_tdlogo.c
+vars.h

@@ -1,0 +1,55 @@
+void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int len) {
+  char macStr[18];
+  snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
+           mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+
+  if (len != sizeof(Message)) {
+    Serial.printf("⚠️ Invalid message size: %d\n", len);
+    return;
+  }
+
+  Message msg;
+  memcpy(&msg, incomingData, sizeof(msg));
+  Serial.printf("📩 Received msg: from=%s, type=%d, index=%d, value=%d\n", macStr, msg.type, msg.index, msg.value);
+
+  switch (msg.type) {
+    case 1: // 1. tipusú verseny üzenet
+      switch (msg.index) {
+        case 1:  //R1 versenyző
+          switch (msg.value) {
+            case 0:
+                  lv_obj_set_style_bg_color(objects.p1, lv_color_hex(0x00FF00), 0);  //1. versenyző készen áll
+                  //Serial.printf("✅ Racer %d ready = %d\n", msg.index, msg.value);
+            break;
+          }
+        break;
+        case 2:
+          switch (msg.value) {
+            case 0:
+                  lv_obj_set_style_bg_color(objects.p2, lv_color_hex(0x00FF00), 0);  //2. versenyző készen áll
+            break;
+          }
+        break;
+        case 3:
+          switch (msg.value) {
+            case 0:
+                  lv_obj_set_style_bg_color(objects.p3, lv_color_hex(0x00FF00), 0);  //3. versenyző készen áll
+            break;
+          }
+        break;
+        case 4:
+          switch (msg.value) {
+            case 0:
+                  lv_obj_set_style_bg_color(objects.p4, lv_color_hex(0x00FF00), 0);  //4. versenyző készen áll
+            break;
+          }
+        break;
+      }
+    break;
+    case 2: // Fényerő
+      //analogWrite(LED_BUILTIN, msg.value);
+    break;
+    default:
+      Serial.println("❓ Unknown message type");
+  }
+}
