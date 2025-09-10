@@ -15,6 +15,8 @@
 //#include <udpconfig.h>
 #include <ArduinoJson.h>
 
+String fwversion = "1.0.0";
+
 std::queue<Message> msgQueue;
 portMUX_TYPE queueMux = portMUX_INITIALIZER_UNLOCKED; // FreeRTOS lock
 
@@ -439,6 +441,9 @@ void setup()
 
   // Initialize LVGL ticker
   lv_last_tick = millis();
+
+  lv_label_set_text(objects.version, fwversion.c_str());
+  
 }
 
 void loop()

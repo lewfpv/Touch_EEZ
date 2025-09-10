@@ -15,6 +15,7 @@ typedef struct _objects_t {
     lv_obj_t *wifisettings;
     lv_obj_t *eventsettings;
     lv_obj_t *startpadsettings;
+    lv_obj_t *about;
     lv_obj_t *p1;
     lv_obj_t *r1text;
     lv_obj_t *pilot1text;
@@ -51,6 +52,10 @@ typedef struct _objects_t {
     lv_obj_t *startpad_led_sw;
     lv_obj_t *obj3;
     lv_obj_t *startpad_all_led_slider;
+    lv_obj_t *obj4;
+    lv_obj_t *version;
+    lv_obj_t *ota_button;
+    lv_obj_t *ota_spinner;
 } objects_t;
 
 extern objects_t objects;
@@ -63,6 +68,7 @@ enum ScreensEnum {
     SCREEN_ID_WIFISETTINGS = 5,
     SCREEN_ID_EVENTSETTINGS = 6,
     SCREEN_ID_STARTPADSETTINGS = 7,
+    SCREEN_ID_ABOUT = 8,
 };
 
 void create_screen_main();
@@ -85,6 +91,9 @@ void tick_screen_eventsettings();
 
 void create_screen_startpadsettings();
 void tick_screen_startpadsettings();
+
+void create_screen_about();
+void tick_screen_about();
 
 void tick_screen_by_id(enum ScreensEnum screenId);
 void tick_screen(int screen_index);

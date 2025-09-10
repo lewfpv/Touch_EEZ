@@ -29,6 +29,8 @@ extern void action_on_panel3_touch(lv_event_t * e);
 extern void action_on_panel4_touch(lv_event_t * e);
 extern void action_startpad_all_led_slider(lv_event_t * e);
 extern void action_on_settings_lan_btn_clicked(lv_event_t * e);
+extern void action_ota(lv_event_t * e);
+extern void action_on_settings_about_btn_clicked(lv_event_t * e);
 
 
 #ifdef __cplusplus

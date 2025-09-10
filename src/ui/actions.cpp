@@ -50,6 +50,10 @@ void action_on_settings_startpad_btn_clicked(lv_event_t * e){
     lv_scr_load(objects.startpadsettings);
 }
 
+void action_on_settings_about_btn_clicked(lv_event_t * e){
+    lv_scr_load(objects.about);
+}
+
 void action_on_panel1_touch(lv_event_t * e){
   lv_obj_add_flag(objects.p1, LV_OBJ_FLAG_HIDDEN);
 }
@@ -141,8 +145,12 @@ void action_connect_to_wifi(lv_event_t * e) {
   }
 }
 
+void action_getjson(lv_event_t * e) {
+  //empty
+}
+
 //OTA frissítés
-void action_OTA(lv_event_t * e) {
+void action_ota(lv_event_t * e) {
   const char *ssid = lv_textarea_get_text(objects.ssid);
   const char *password = lv_textarea_get_text(objects.pwd);
 
