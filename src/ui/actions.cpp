@@ -171,7 +171,7 @@ void action_ota(lv_event_t * e) {
     Serial.println("\n✅ WiFi connected!");
     Serial.println(WiFi.localIP());
 
-        t_httpUpdate_return ret = ESPhttpUpdate.update("https://raw.githubusercontent.com/lewfpv/Touch_EEZ/main/fw/firmware.bin");
+        t_httpUpdate_return ret = ESPhttpUpdate.update("http://raw.githubusercontent.com/lewfpv/Touch_EEZ/main/fw/firmware.bin");
 
         switch(ret) {
             case HTTP_UPDATE_FAILED:
