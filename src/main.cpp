@@ -331,9 +331,13 @@ void reset() {
     lv_obj_add_flag(objects.finishline3, LV_OBJ_FLAG_HIDDEN);
 
     Message msg = {9, 0, 0};  
-    SendNOW(receiver1, msg); 
-    SendNOW(receiver2, msg); 
-    SendNOW(receiver3, msg); 
+
+    for (int i = 0; i < 7; i++) {
+    SendNOW(peers[i], msg);
+    }
+    //SendNOW(peers[4], msg); 
+    //SendNOW(peers[5], msg); 
+    //SendNOW(peers[6], msg); 
 
     for (int i = 0; i < 4; i++) {
         racer_done[i] = false;

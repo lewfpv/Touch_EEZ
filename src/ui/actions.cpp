@@ -3,6 +3,7 @@
 #include "ui.h"
 #include "actions.h"  // ez fontos, hogy illeszkedjen a prototípusokhoz
 #include "message.h"
+#include "addpeers.h"
 #include <WiFiUdp.h>
 //#include <udpconfig.h>
 #include <WiFiClient.h>
@@ -12,9 +13,9 @@
 #include <ArduinoJson.h>
 
 // Vevők MAC címei
-uint8_t rec1[] = { 0xEC, 0xDA, 0x3B, 0xBF, 0xE6, 0x44 };  // Start pad, LEDek
-uint8_t rec2[] = { 0xEC, 0xDA, 0x3B, 0xBF, 0xE9, 0xA8 };  // pedál 1-2 EC:DA:3B:BF:E9:A8
-uint8_t rec3[] = { 0xEC, 0xDA, 0x3B, 0xBF, 0xC6, 0xB8 };  // pedál 3-4 EC:DA:3B:BF:C6:B8
+//uint8_t rec1[] = { 0xEC, 0xDA, 0x3B, 0xBF, 0xE6, 0x44 };  // Start pad, LEDek
+//uint8_t rec2[] = { 0xEC, 0xDA, 0x3B, 0xBF, 0xE9, 0xA8 };  // pedál 1-2 EC:DA:3B:BF:E9:A8
+//uint8_t rec3[] = { 0xEC, 0xDA, 0x3B, 0xBF, 0xC6, 0xB8 };  // pedál 3-4 EC:DA:3B:BF:C6:B8
 
 extern void SendNOW(const uint8_t *mac, const Message &msg);
 extern void resetRaceStats();
@@ -73,11 +74,11 @@ void action_startpad_led_switch(lv_event_t * e){
   if (lv_obj_has_state(objects.startpad_led_sw, LV_STATE_CHECKED)) {
         Serial.println("Kapcsoló: BE");
         Message msg = {5, 1, 0};  // type, index, value  (type=9 reset, index mit reseteljen, value mire reseteljen 0 tehát pirosra
-        SendNOW(rec1, msg); //startpad ledek
+        SendNOW(peers[6], msg); //startpad ledek
     } else {
         Serial.println("Kapcsoló: KI");
         Message msg = {5, 1, 1};  // type, index, value  (type=9 reset, index mit reseteljen, value mire reseteljen 0 tehát pirosra
-        SendNOW(rec1, msg); //startpad ledek
+        SendNOW(peers[6], msg); //startpad ledek
     }
 }
 
@@ -88,7 +89,7 @@ void action_startpad_all_led_slider(lv_event_t * e){
   int brightness = val * 255 / 100;
   Serial.printf("📊 Slider value: %d\n", brightness);
   Message msg = {5, 0, static_cast<uint8_t>(brightness)};  // type, index, value  (type=9 reset, index mit reseteljen, value mire reseteljen 0 tehát pirosra
-  SendNOW(rec1, msg);
+  SendNOW(peers[6], msg);
 }
 
 void action_hide_finish_panel(lv_event_t * e){
