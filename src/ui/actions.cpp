@@ -5,8 +5,10 @@
 #include "message.h"
 #include <WiFiUdp.h>
 //#include <udpconfig.h>
+#include <WiFiClient.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
+#include <ESP32httpUpdate.h>
 #include <ArduinoJson.h>
 
 // Vevők MAC címei
@@ -138,7 +140,8 @@ void action_connect_to_wifi(lv_event_t * e) {
   }
 }
 
-void action_getjson(lv_event_t * e) {
+//OTA frissítés
+void action_OTA(lv_event_t * e) {
   const char *ssid = lv_textarea_get_text(objects.ssid);
   const char *password = lv_textarea_get_text(objects.pwd);
 
@@ -159,48 +162,21 @@ void action_getjson(lv_event_t * e) {
     Serial.println("\n✅ WiFi connected!");
     Serial.println(WiFi.localIP());
 
-    // ⚠️ HTTPS: használjunk secure klienst
-    WiFiClientSecure client;
-    client.setInsecure();  // ⛔️ Nem biztonságos, de működik
+    // Firmware URL
+    String fwURL = "http://yourserver.com/firmware.bin";
 
-    HTTPClient https;
-    https.begin(client, "https://api.rhcloudlink.com/slots?eventid=z1q8o&classid=3");
-    int httpCode = https.GET();
-
-    if (httpCode > 0) {
-      Serial.printf("HTTP status code: %d\n", httpCode);
-      String payload = https.getString();
-      Serial.println("Received JSON:");
-      //Serial.println(payload);
-
-      DynamicJsonDocument doc(8192);
-      DeserializationError error = deserializeJson(doc, payload);
-
-      for (JsonObject slot : doc.as<JsonArray>()) {
-       const char* callsign = slot["callsign"] | "N/A";
-       const char* heatname = slot["heatname"] | "N/A";
-       const char* channel = slot["channel"] | "N/A";
-     
-       Serial.printf("Callsign: %s, Heat: %s, Channel: %s\n", 
-                     callsign, heatname, channel);
-    
-      // Ha később LVGL-ben is meg akarod jeleníteni:
-      // lv_label_set_text_fmt(label, "%s (%s) - CH%d", callsign, heatname, channel);
-      delay(100);
-      }
-
-      if (!error) {
-        serializeJsonPretty(doc, Serial);
-      } else {
-        Serial.print("JSON parse error: ");
-        Serial.println(error.c_str());
-      }
-    } else {
-      Serial.print("HTTP GET failed: ");
-      Serial.println(https.errorToString(httpCode));
-    }
-
-    https.end();
+    t_httpUpdate_return ret = ESPhttpUpdate.update(fwURL);
+    switch(ret) {
+    case HTTP_UPDATE_FAILED:
+      Serial.printf("Update failed: %s\n", ESPhttpUpdate.getLastErrorString().c_str());
+      break;
+    case HTTP_UPDATE_NO_UPDATES:
+      Serial.println("No update available");
+      break;
+    case HTTP_UPDATE_OK:
+      Serial.println("Update ok"); // automatikusan újraindul
+      break;
+  }
   } else {
     Serial.println("\n❌ WiFi connection failed.");
   }
