@@ -1,6 +1,6 @@
 {
   "navigation": {
-    "selectedUserPageObject": "[TouchEEZ.eez-project]:/userPages/0",
+    "selectedUserPageObject": "[TouchEEZ.eez-project]:/userPages/7",
     "selectedFontObject": "[TouchEEZ.eez-project]:/fonts/1",
     "selectedBitmapObject": "[TouchEEZ.eez-project]:/bitmaps/1",
     "subnavigationSelectedItems": {
@@ -26,7 +26,7 @@
           {
             "type": "border",
             "selected": 0,
-            "size": 240,
+            "size": 244.5,
             "location": "right",
             "children": [
               {
@@ -198,11 +198,11 @@
               "children": [
                 {
                   "type": "tab",
-                  "id": "#0879e193-5dcd-4752-8215-10ac0aa96ba2",
-                  "name": "Main",
+                  "id": "#c9ea20a4-2ffd-4fd0-abfb-b634d8526bf8",
+                  "name": "About",
                   "component": "editor",
                   "config": {
-                    "objectPath": "[TouchEEZ.eez-project]:/userPages/0",
+                    "objectPath": "[TouchEEZ.eez-project]:/userPages/7",
                     "permanent": false
                   },
                   "icon": "svg:page"
@@ -218,7 +218,8 @@
                   },
                   "icon": "svg:page"
                 }
-              ]
+              ],
+              "active": true
             },
             {
               "type": "row",
@@ -238,8 +239,7 @@
                       "enableClose": false,
                       "icon": "svg:properties"
                     }
-                  ],
-                  "active": true
+                  ]
                 },
                 {
                   "type": "tabset",
@@ -1025,14 +1025,9 @@
     "[TouchEEZ.eez-project]:/userPages/1[flow-state]": {
       "selection": {
         "0": {
-          "0": {
-            "0": {}
-          },
           "1": {},
-          "2": {},
-          "3": {},
-          "4": {},
-          "5": {}
+          "5": {},
+          "6": {}
         }
       },
       "transform": {
@@ -1098,9 +1093,7 @@
           "3": {},
           "4": {},
           "5": {},
-          "7": {
-            "$selected": true
-          }
+          "7": {}
         }
       },
       "transform": {
@@ -1142,6 +1135,51 @@
       }
     },
     "[TouchEEZ.eez-project]:/userPages/6[flow-state]": {
+      "selection": {
+        "0": {
+          "0": {},
+          "2": {}
+        }
+      },
+      "transform": {
+        "translate": {
+          "x": -399,
+          "y": -239
+        },
+        "scale": 0.8
+      },
+      "timeline": {
+        "isEditorActive": false,
+        "position": 0,
+        "secondToPx": 200,
+        "scrollLeft": 0
+      }
+    },
+    "[TouchEEZ.eez-project]:/userPages/7[flow-state]": {
+      "selection": {
+        "0": {
+          "0": {
+            "1": {}
+          },
+          "1": {},
+          "2": {}
+        }
+      },
+      "transform": {
+        "translate": {
+          "x": -400,
+          "y": -140
+        },
+        "scale": 0.8
+      },
+      "timeline": {
+        "isEditorActive": false,
+        "position": 0,
+        "secondToPx": 200,
+        "scrollLeft": 0
+      }
+    },
+    "[TouchEEZ.eez-project]:/userPages/-1[flow-state]": {
       "selection": {},
       "transform": {
         "translate": {
