@@ -20,6 +20,8 @@ String fwversion = "1.0.x";
 std::queue<Message> msgQueue;
 portMUX_TYPE queueMux = portMUX_INITIALIZER_UNLOCKED; // FreeRTOS lock
 
+MessageLong outgoingMessage;
+
 //LAN
 #define W5500_SCLK   12    // Zöld
 #define W5500_MISO   13    // Kék
@@ -191,6 +193,8 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int len) {
 }
 
 // Globális állapotok (kezdetben minden false, azaz nem kész)
+bool racer_lap1[4] = { false, false, false, false };
+bool racer_lap2[4] = { false, false, false, false };
 bool racer_done[4] = { false, false, false, false };
 
 void processIncomingMessages() {
@@ -220,11 +224,13 @@ void processIncomingMessages() {
 
                     else if (msg.value == 1) {
                         // Első kör teljesítve → sárga
+                        racer_lap1[idx] = true; 
                         lv_obj_set_style_bg_color(panel, lv_color_hex(0xFFFF00), 0);
                         lv_obj_set_style_text_color(text, lv_color_hex(0x000000), 0);
                     } 
                     else if (msg.value == 2) {
                         // Második kör teljesítve → narancs
+                        racer_lap2[idx] = true;
                         lv_obj_set_style_bg_color(panel, lv_color_hex(0xFF8000), 0);
                         lv_obj_set_style_text_color(text, lv_color_hex(0x000000), 0);
                     } 
@@ -276,7 +282,7 @@ void reset() {
     // Ellenőrizzük, van-e legalább egy true a racer_done-ban
     bool needReset = false;
     for (int i = 0; i < 4; i++) {
-        if (racer_done[i]) {
+        if (racer_done[i] || racer_lap1) {
             needReset = true;
             break;
         }
@@ -337,17 +343,28 @@ void reset() {
     lv_obj_add_flag(objects.finishline2, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(objects.finishline3, LV_OBJ_FLAG_HIDDEN);
 
-    Message msg = {9, 0, 0};  
-
-    for (int i = 0; i < 7; i++) {
+    Message msg = {9, 0, 0};  // itt reseteljük a két pedált és a startpadot
+    for (int i = 4; i < 7; i++) {
     SendNOW(peers[i], msg);
     }
+
     //SendNOW(peers[4], msg); 
     //SendNOW(peers[5], msg); 
     //SendNOW(peers[6], msg); 
 
+   // Race finisher reset
+  outgoingMessage.type = 9;
+  outgoingMessage.index = 0;
+  strncpy(outgoingMessage.p, "", sizeof(outgoingMessage.p));
+  SendLong(peers[0], outgoingMessage);
+  SendLong(peers[1], outgoingMessage);
+  SendLong(peers[2], outgoingMessage);
+  SendLong(peers[3], outgoingMessage);
+
     for (int i = 0; i < 4; i++) {
         racer_done[i] = false;
+        racer_lap1[i] = false;
+        racer_lap2[i] = false;
     }
 }
 
@@ -385,11 +402,22 @@ void parseUDP(char* msg) {
   }
   drawpilots();
 
-  MessageLong msg = {9, 0, String(pilot[0])}; 
-  SendLong(peers[1], msg);
-       
- 
+  // Kiküldjük a race finishereknek a pilótaneveket és reset
+  outgoingMessage.type = 9;
+  outgoingMessage.index = 1;
 
+  strncpy(outgoingMessage.p, P1, sizeof(outgoingMessage.p));
+  SendLong(peers[0], outgoingMessage);
+
+  strncpy(outgoingMessage.p, P2, sizeof(outgoingMessage.p));
+  SendLong(peers[1], outgoingMessage);
+
+  strncpy(outgoingMessage.p, P3, sizeof(outgoingMessage.p));
+  SendLong(peers[2], outgoingMessage);
+
+  strncpy(outgoingMessage.p, P4, sizeof(outgoingMessage.p));
+  SendLong(peers[3], outgoingMessage);
+       
   reset();
 }
 
