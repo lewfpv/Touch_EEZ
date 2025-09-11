@@ -167,6 +167,11 @@ void SendNOW(const uint8_t *mac, const Message &msg) {
   (result == ESP_OK) ? Serial.println("✅ Message sent successfully") : Serial.printf("❌ Send error (%d)\n", result);
 }
 
+void SendLong(const uint8_t *mac, const MessageLong &msg) {
+  esp_err_t result = esp_now_send(mac, (uint8_t *)&msg, sizeof(msg));
+  (result == ESP_OK) ? Serial.println("✅ Message sent successfully") : Serial.printf("❌ Send error (%d)\n", result);
+}
+
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   char macStr[18];
   snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
@@ -379,6 +384,12 @@ void parseUDP(char* msg) {
     token = strtok(NULL, ".");
   }
   drawpilots();
+
+  MessageLong msg = {9, 0, String(pilot[0])}; 
+  SendLong(peers[1], msg);
+       
+ 
+
   reset();
 }
 

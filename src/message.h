@@ -20,4 +20,10 @@ struct Message {
   uint8_t value;  // Pl. 0/1 vagy fényerő érték 0..255
 };
 
+struct MessageLong {
+  uint8_t type;   // 1: Pedál, 2: Fényerő stb.
+  uint8_t index;  // Melyik pedál/LED
+  String value;  // Pl. 0/1 vagy fényerő érték 0..255
+};
+
 #endif
