@@ -22,6 +22,51 @@ portMUX_TYPE queueMux = portMUX_INITIALIZER_UNLOCKED; // FreeRTOS lock
 
 MessageLong outgoingMessage;
 
+
+// Egységes kimenő queue minden üzenethez
+struct TxMessage {
+  uint8_t mac[6];
+  size_t size;
+  uint8_t data[sizeof(MessageLong)];  // elég nagy buffer a legnagyobb üzenethez
+};
+
+std::queue<TxMessage> txQueue;
+portMUX_TYPE txMux = portMUX_INITIALIZER_UNLOCKED;
+
+void QueueSend(const uint8_t *mac, const void *data, size_t size) {
+  TxMessage tx;
+  memcpy(tx.mac, mac, 6);
+  memcpy(tx.data, data, size);
+  tx.size = size;
+
+  portENTER_CRITICAL(&txMux);
+  txQueue.push(tx);
+  portEXIT_CRITICAL(&txMux);
+}
+
+void HandleOutgoingMessages() {
+  portENTER_CRITICAL(&txMux);
+  if (txQueue.empty()) {
+    portEXIT_CRITICAL(&txMux);
+    return;
+  }
+  TxMessage tx = txQueue.front();
+  txQueue.pop();
+  portEXIT_CRITICAL(&txMux);
+
+  esp_err_t result = esp_now_send(tx.mac, tx.data, tx.size);
+  if (result == ESP_OK) {
+    Serial.println("✅ Message sent");
+  } else {
+    Serial.printf("❌ Send error (%d)\n", result);
+    // opcionálisan: visszatesszük újrapróbálkozásra
+    // portENTER_CRITICAL(&txMux);
+    // txQueue.push(tx);
+    // portEXIT_CRITICAL(&txMux);
+  }
+}
+
+
 //LAN
 #define W5500_SCLK   12    // Zöld
 #define W5500_MISO   13    // Kék
@@ -343,23 +388,30 @@ void reset() {
     lv_obj_add_flag(objects.finishline2, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(objects.finishline3, LV_OBJ_FLAG_HIDDEN);
 
-    Message msg = {9, 0, 0};  // itt reseteljük a két pedált és a startpadot
-    for (int i = 4; i < 7; i++) {
-    SendNOW(peers[i], msg);
-    }
+Message msg = {9, 0, 0};
+for (int i = 4; i < 7; i++) {
+  QueueSend(peers[i], &msg, sizeof(msg));
+}
 
     //SendNOW(peers[4], msg); 
     //SendNOW(peers[5], msg); 
     //SendNOW(peers[6], msg); 
 
-   // Race finisher reset
-  outgoingMessage.type = 9;
-  outgoingMessage.index = 0;
-  strncpy(outgoingMessage.p, "", sizeof(outgoingMessage.p));
-  SendLong(peers[0], outgoingMessage);
-  SendLong(peers[1], outgoingMessage);
-  SendLong(peers[2], outgoingMessage);
-  SendLong(peers[3], outgoingMessage);
+// Race finisher reset
+outgoingMessage.type = 9;
+outgoingMessage.index = 0;
+
+strncpy(outgoingMessage.p, P1, sizeof(outgoingMessage.p));
+QueueSend(peers[0], &outgoingMessage, sizeof(outgoingMessage));
+
+strncpy(outgoingMessage.p, P2, sizeof(outgoingMessage.p));
+QueueSend(peers[1], &outgoingMessage, sizeof(outgoingMessage));
+
+strncpy(outgoingMessage.p, P3, sizeof(outgoingMessage.p));
+QueueSend(peers[2], &outgoingMessage, sizeof(outgoingMessage));
+
+strncpy(outgoingMessage.p, P4, sizeof(outgoingMessage.p));
+QueueSend(peers[3], &outgoingMessage, sizeof(outgoingMessage));
 
     for (int i = 0; i < 4; i++) {
         racer_done[i] = false;
@@ -369,8 +421,28 @@ void reset() {
 }
 
 void parseUDP(char* msg) {
-  P1 = P2 = P3 = P4 = "-";
-  heatname = "-";
+  // A strlen() lekéri a string hosszát (a lezáró \0 karaktert nem számolja bele)
+  if (strlen(msg) == 1) {
+    // Megvizsgáljuk, hogy az első és egyetlen karakter egy '1'-es-e
+    if (msg[0] == '1') {
+      Serial.printf("RACE STARTED");
+
+      // Race finisher timerstart ->
+  outgoingMessage.type = 1;
+  outgoingMessage.index = 2;
+  strncpy(outgoingMessage.p, "", sizeof(outgoingMessage.p));
+  SendLong(peers[0], outgoingMessage);
+  SendLong(peers[1], outgoingMessage);
+  SendLong(peers[2], outgoingMessage);
+  SendLong(peers[3], outgoingMessage);
+
+  //STARTPAD LED OFF
+        Serial.println("Kapcsoló: KI");
+        Message msg = {5, 1, 0};  // type, index, value  (type=9 reset, index mit reseteljen, value mire reseteljen 0 tehát pirosra
+        SendNOW(peers[6], msg); //startpad ledek
+
+    }
+  }
 
   // Heatnév kinyerése
   char* sep = strstr(msg, " . ");
@@ -401,23 +473,6 @@ void parseUDP(char* msg) {
     token = strtok(NULL, ".");
   }
   drawpilots();
-
-  // Kiküldjük a race finishereknek a pilótaneveket és reset
-  outgoingMessage.type = 9;
-  outgoingMessage.index = 1;
-
-  strncpy(outgoingMessage.p, P1, sizeof(outgoingMessage.p));
-  SendLong(peers[0], outgoingMessage);
-
-  strncpy(outgoingMessage.p, P2, sizeof(outgoingMessage.p));
-  SendLong(peers[1], outgoingMessage);
-
-  strncpy(outgoingMessage.p, P3, sizeof(outgoingMessage.p));
-  SendLong(peers[2], outgoingMessage);
-
-  strncpy(outgoingMessage.p, P4, sizeof(outgoingMessage.p));
-  SendLong(peers[3], outgoingMessage);
-       
   reset();
 }
 
@@ -487,6 +542,7 @@ void setup()
 
 void loop()
 {
+  HandleOutgoingMessages();
   auto const now = millis();
 
   // Update LVGL tick

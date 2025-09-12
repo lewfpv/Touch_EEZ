@@ -76,11 +76,11 @@ void action_reset_racer_pedals(lv_event_t * e) {
 
 void action_startpad_led_switch(lv_event_t * e){
   if (lv_obj_has_state(objects.startpad_led_sw, LV_STATE_CHECKED)) {
-        Serial.println("Kapcsoló: BE");
+        Serial.println("Kapcsoló: KI");
         Message msg = {5, 1, 0};  // type, index, value  (type=9 reset, index mit reseteljen, value mire reseteljen 0 tehát pirosra
         SendNOW(peers[6], msg); //startpad ledek
     } else {
-        Serial.println("Kapcsoló: KI");
+        Serial.println("Kapcsoló: BE");
         Message msg = {5, 1, 1};  // type, index, value  (type=9 reset, index mit reseteljen, value mire reseteljen 0 tehát pirosra
         SendNOW(peers[6], msg); //startpad ledek
     }
