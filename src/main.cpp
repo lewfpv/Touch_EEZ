@@ -15,56 +15,90 @@
 //#include <udpconfig.h>
 #include <ArduinoJson.h>
 
-String fwversion = "1.0.x";
+String fwversion = "1.0.7";
+
+//LAN MAC: DE-AD-BE-EF-FE-ED
+//WIZnetEFFEED
 
 std::queue<Message> msgQueue;
 portMUX_TYPE queueMux = portMUX_INITIALIZER_UNLOCKED; // FreeRTOS lock
 
 MessageLong outgoingMessage;
 
-
-// Egységes kimenő queue minden üzenethez
 struct TxMessage {
   uint8_t mac[6];
   size_t size;
-  uint8_t data[sizeof(MessageLong)];  // elég nagy buffer a legnagyobb üzenethez
+  uint8_t data[sizeof(MessageLong)];
+  uint8_t retries;
+  unsigned long nextSendTime;  // mikor küldhető legközelebb
 };
 
 std::queue<TxMessage> txQueue;
 portMUX_TYPE txMux = portMUX_INITIALIZER_UNLOCKED;
 
+const size_t MAX_QUEUE_SIZE = 30;
+const uint8_t MAX_RETRIES = 5;
+const unsigned long SEND_INTERVAL = 5;   // min. 5 ms két küldés között
+const unsigned long RETRY_DELAY   = 20;  // újrapróbálkozás késleltetése (ms)
+
 void QueueSend(const uint8_t *mac, const void *data, size_t size) {
+  portENTER_CRITICAL(&txMux);
+  if (txQueue.size() >= MAX_QUEUE_SIZE) {
+    txQueue.pop();
+    Serial.println("⚠️ TX queue full, dropping oldest!");
+  }
+
   TxMessage tx;
   memcpy(tx.mac, mac, 6);
   memcpy(tx.data, data, size);
   tx.size = size;
+  tx.retries = MAX_RETRIES;
+  tx.nextSendTime = millis();  // azonnal küldhető
 
-  portENTER_CRITICAL(&txMux);
   txQueue.push(tx);
   portEXIT_CRITICAL(&txMux);
 }
 
 void HandleOutgoingMessages() {
+  static unsigned long lastSendTime = 0;
+  if (millis() - lastSendTime < SEND_INTERVAL) return;  // globális sebességkorlát
+
   portENTER_CRITICAL(&txMux);
   if (txQueue.empty()) {
     portEXIT_CRITICAL(&txMux);
     return;
   }
   TxMessage tx = txQueue.front();
-  txQueue.pop();
+
+  // Ha még nem jött el az ideje, ne küldjük ki
+  if (millis() < tx.nextSendTime) {
+    portEXIT_CRITICAL(&txMux);
+    return;
+  }
+
+  txQueue.pop();  // kivesszük a sorból
   portEXIT_CRITICAL(&txMux);
 
   esp_err_t result = esp_now_send(tx.mac, tx.data, tx.size);
   if (result == ESP_OK) {
     Serial.println("✅ Message sent");
   } else {
-    Serial.printf("❌ Send error (%d)\n", result);
-    // opcionálisan: visszatesszük újrapróbálkozásra
-    // portENTER_CRITICAL(&txMux);
-    // txQueue.push(tx);
-    // portEXIT_CRITICAL(&txMux);
+    Serial.printf("❌ Send error (%d), retries left: %d\n", result, tx.retries - 1);
+    if (tx.retries > 1) {
+      tx.retries--;
+      tx.nextSendTime = millis() + RETRY_DELAY;  // késleltetett újrapróbálkozás
+      portENTER_CRITICAL(&txMux);
+      txQueue.push(tx);  // visszatesszük a sor végére
+      portEXIT_CRITICAL(&txMux);
+    } else {
+      Serial.println("❌ Giving up on message after max retries!");
+    }
   }
+
+  lastSendTime = millis();
 }
+
+
 
 
 //LAN
@@ -92,11 +126,13 @@ String finishers[MAX_RACERS];
 String pilot[MAX_RACERS];
 int finishCount = 0;
 bool resultBoxDrawn = false;
+bool needReset = false;
+
 const char* heatname = "-";
-const char* P1 = "";
-const char* P2 = "";
-const char* P3 = "";
-const char* P4 = "";
+const char* P1 = "Racer_1";
+const char* P2 = "Racer_2";
+const char* P3 = "Racer_3";
+const char* P4 = "Racer_4";
 
 void drawpilots(){
 
@@ -256,11 +292,12 @@ void processIncomingMessages() {
 
                     lv_obj_t* panel = nullptr;
                     lv_obj_t* text = nullptr;
+                    lv_obj_t* lapcounter = nullptr;
 
-                    if (idx == 0) panel = objects.p1, text = objects.pilot1text;
-                    else if (idx == 1) panel = objects.p2, text = objects.pilot2text;
-                    else if (idx == 2) panel = objects.p3, text = objects.pilot3text;
-                    else if (idx == 3) panel = objects.p4, text = objects.pilot4text;
+                    if (idx == 0) panel = objects.p1, text = objects.pilot1text, lapcounter = objects.lapcounter1;
+                    else if (idx == 1) panel = objects.p2, text = objects.pilot2text, lapcounter = objects.lapcounter2;
+                    else if (idx == 2) panel = objects.p3, text = objects.pilot3text, lapcounter = objects.lapcounter3;
+                    else if (idx == 3) panel = objects.p4, text = objects.pilot4text, lapcounter = objects.lapcounter4;
 
                     if (msg.value == 0) {
                         lv_obj_set_style_bg_color(panel, lv_color_hex(0x00FF00), 0);
@@ -272,14 +309,17 @@ void processIncomingMessages() {
                         racer_lap1[idx] = true; 
                         lv_obj_set_style_bg_color(panel, lv_color_hex(0xFFFF00), 0);
                         lv_obj_set_style_text_color(text, lv_color_hex(0x000000), 0);
+                        lv_label_set_text(lapcounter, "1");
                     } 
                     else if (msg.value == 2) {
                         // Második kör teljesítve → narancs
                         racer_lap2[idx] = true;
                         lv_obj_set_style_bg_color(panel, lv_color_hex(0xFF8000), 0);
                         lv_obj_set_style_text_color(text, lv_color_hex(0x000000), 0);
+                        lv_label_set_text(lapcounter, "2");
                     } 
                     else if (msg.value == 3) {
+                        lv_label_set_text(lapcounter, "3");
                         // Célba érkezett → zöld + finishpanel frissítés
                         if (!racer_done[idx]) {
                             racer_done[idx] = true;
@@ -303,6 +343,15 @@ void processIncomingMessages() {
                                 String textline = String(finishCount + 1) + ". " + finishers[finishCount];
                                 lv_label_set_text(finishlines[finishCount], textline.c_str());
                                 lv_obj_clear_flag(finishlines[finishCount], LV_OBJ_FLAG_HIDDEN);
+
+                                /// helyezés kiküldése a spotternek
+                                Serial.println("helyezés kiküldése a spotternek");
+                                outgoingMessage.type = 6;
+                                outgoingMessage.index = finishCount + 1;
+                                strncpy(outgoingMessage.p, "", sizeof(outgoingMessage.p));
+                                QueueSend(peers[idx], &outgoingMessage, sizeof(outgoingMessage));
+                                Serial.println("helyezes: " + String(outgoingMessage.index));
+                                Serial.println("ELKULDVE neki: " + String(msg.index));
                                 finishCount++;
                             }
                         }
@@ -322,10 +371,10 @@ void processIncomingMessages() {
     }
 }
 
-
+//// RESET START
 void reset() {
     // Ellenőrizzük, van-e legalább egy true a racer_done-ban
-    bool needReset = false;
+    
     for (int i = 0; i < 4; i++) {
         if (racer_done[i] || racer_lap1) {
             needReset = true;
@@ -388,10 +437,10 @@ void reset() {
     lv_obj_add_flag(objects.finishline2, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(objects.finishline3, LV_OBJ_FLAG_HIDDEN);
 
-Message msg = {9, 0, 0};
-for (int i = 4; i < 7; i++) {
-  QueueSend(peers[i], &msg, sizeof(msg));
-}
+    lv_label_set_text(objects.lapcounter1, "-");
+    lv_label_set_text(objects.lapcounter2, "-");
+    lv_label_set_text(objects.lapcounter3, "-");
+    lv_label_set_text(objects.lapcounter4, "-");
 
     //SendNOW(peers[4], msg); 
     //SendNOW(peers[5], msg); 
@@ -413,12 +462,19 @@ QueueSend(peers[2], &outgoingMessage, sizeof(outgoingMessage));
 strncpy(outgoingMessage.p, P4, sizeof(outgoingMessage.p));
 QueueSend(peers[3], &outgoingMessage, sizeof(outgoingMessage));
 
+Message msg = {9, 0, 0};
+for (int i = 4; i < 7; i++) {
+  QueueSend(peers[i], &msg, sizeof(msg));
+}
+
+
     for (int i = 0; i < 4; i++) {
         racer_done[i] = false;
         racer_lap1[i] = false;
         racer_lap2[i] = false;
     }
 }
+//// RESET END
 
 void parseUDP(char* msg) {
   // A strlen() lekéri a string hosszát (a lezáró \0 karaktert nem számolja bele)
@@ -426,15 +482,16 @@ void parseUDP(char* msg) {
     // Megvizsgáljuk, hogy az első és egyetlen karakter egy '1'-es-e
     if (msg[0] == '1') {
       Serial.printf("RACE STARTED");
-
+      needReset = true;
       // Race finisher timerstart ->
   outgoingMessage.type = 1;
   outgoingMessage.index = 2;
   strncpy(outgoingMessage.p, "", sizeof(outgoingMessage.p));
-  SendLong(peers[0], outgoingMessage);
-  SendLong(peers[1], outgoingMessage);
-  SendLong(peers[2], outgoingMessage);
-  SendLong(peers[3], outgoingMessage);
+
+  QueueSend(peers[0], &outgoingMessage, sizeof(outgoingMessage));
+  QueueSend(peers[1], &outgoingMessage, sizeof(outgoingMessage));
+  QueueSend(peers[2], &outgoingMessage, sizeof(outgoingMessage));
+  QueueSend(peers[3], &outgoingMessage, sizeof(outgoingMessage));
 
   //STARTPAD LED OFF
         Serial.println("Kapcsoló: KI");
@@ -442,7 +499,10 @@ void parseUDP(char* msg) {
         SendNOW(peers[6], msg); //startpad ledek
 
     }
-  }
+  } else {
+
+  P1 = P2 = P3 = P4 = "-";
+  heatname = "-";
 
   // Heatnév kinyerése
   char* sep = strstr(msg, " . ");
@@ -474,6 +534,7 @@ void parseUDP(char* msg) {
   }
   drawpilots();
   reset();
+  }
 }
 
 
@@ -502,7 +563,7 @@ void setup()
   Ethernet.init(W5500_CS); //CS (SCS)
 
   // DHCP gyors próba
-  if (Ethernet.begin(mac, 4000) == 0) {  // max 5 sec várakozás
+  if (Ethernet.begin(mac, 10000) == 0) {  // max 10 sec várakozás
     Serial.println("DHCP hiba! Fix IP-t állítok be...");
     IPAddress ip(192, 168, 0, 177);
     IPAddress dns(192, 168, 0, 1);
@@ -537,6 +598,7 @@ void setup()
   lv_last_tick = millis();
 
   lv_label_set_text(objects.version, fwversion.c_str());
+  drawpilots();
   
 }
 
